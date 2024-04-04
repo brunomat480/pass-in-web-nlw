@@ -1,18 +1,67 @@
+import { ChangeEvent, useEffect, useState } from "react"
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, MoreHorizontal, Search } from 'lucide-react'
+import dayjs from "dayjs"
+import relativeTime from 'dayjs/plugin/relativeTime'
+import "dayjs/locale/pt-br"
 import { IconButton } from "./icon-button"
 import { Table } from "./table/table"
 import { TableHeader } from "./table/table-header"
 import { TableCell } from "./table/table-cell"
 import { TableRow } from "./table/table-row"
 
+dayjs.extend(relativeTime)
+dayjs.locale('pt-br')
+
+interface Attendee {
+  id: string
+  name: string
+  email: string
+  createdAt: string
+  checkedInAt: string | null
+}
+
 export function AttendeeList() {
+  const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
+  const [attendees, setAttendees] = useState<Attendee[]>([])
+
+  const totalPage = Math.ceil(attendees.length / 10)
+
+  useEffect(() => {
+    fetch('http://localhost:3333/events/9e9bd979-9d10-4915-b339-3786b1634f33/attendees')
+      .then(response => response.json())
+      .then(data => {
+        setAttendees(data.attendees)
+      })
+  }, [page])
+
+  function onSearchInputChange(event: ChangeEvent<HTMLInputElement>) {
+    setSearch(event.target.value)
+  }
+
+  function goToFirstPage() {
+    setPage(1)
+  }
+
+  function goToLastPage() {
+    setPage(totalPage)
+  }
+
+  function goToNextPage() {
+    setPage(page + 1)
+  }
+
+  function goToPreviousPage() {
+    setPage(page - 1)
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex gap-3 items-center">
         <h1 className="text-2xl font-bold">Participantes</h1>
         <div className="px-3 w-72 py-1.5 border border-white/10  rounded-lg flex items-center gap-3">
           <Search className="size-4 text-emerald-300" />
-          <input className="bg-transparent flex-1 outline-none h-auto border-0 p-0 text-sm" type="text" placeholder="Buscar participantes..." />
+          <input className="bg-transparent flex-1 outline-none h-auto border-0 p-0 text-sm" type="text" placeholder="Buscar participantes..." onChange={onSearchInputChange} />
         </div>
       </div>
 
@@ -30,21 +79,31 @@ export function AttendeeList() {
           </tr>
         </thead>
         <tbody>
-          {Array.from({ length: 8 }).map((_, i) => {
+          {attendees.map((attendee) => {
             return (
-              <TableRow key={i}>
+              <TableRow key={attendee.id}>
                 <TableCell>
                   <input className="size-4 bg-black/20 rounded border border-white/10" type="checkbox" />
                 </TableCell>
-                <TableCell>12383</TableCell>
+                <TableCell>{attendee.id}</TableCell>
                 <TableCell>
                   <div className="flex flex-col gap-1">
-                    <span className="font-semibold text-white">Bruno José Matias Barbosa</span>
-                    <span>bruno@gmail.com</span>
+                    <span className="font-semibold text-white">
+                      {attendee.name}
+                    </span>
+                    <span>
+                      {attendee.email}
+                    </span>
                   </div>
                 </TableCell>
-                <TableCell>7 dias atrás</TableCell>
-                <TableCell>3 dias atrás</TableCell>
+                <TableCell>
+                  {dayjs().to(attendee.createdAt)}
+                </TableCell>
+                <TableCell>
+                  {attendee.checkedInAt === null
+                    ? <span className="text-zinc-400">Não fez check-in</span>
+                    : dayjs().to(attendee.checkedInAt)}
+                </TableCell>
                 <TableCell>
                   <IconButton transparent>
                     <MoreHorizontal className="size-4" />
@@ -57,23 +116,23 @@ export function AttendeeList() {
         <tfoot>
           <tr>
             <TableCell colSpan={3}>
-              Mostrando 10 de 228 itens
+              Mostrando 10 de {attendees.length} itens
             </TableCell>
             <TableCell className="text-right" colSpan={3}>
               <div className="inline-flex items-center gap-8">
-                <span>Página 1 de 23</span>
+                <span>Página {page} de {totalPage}</span>
 
                 <div className="flex gap-1.5">
-                  <IconButton>
+                  <IconButton onClick={goToFirstPage} disabled={page === 1}>
                     <ChevronsLeft className="size-4" />
                   </IconButton>
-                  <IconButton>
+                  <IconButton onClick={goToPreviousPage} disabled={page === 1}>
                     <ChevronLeft className="size-4" />
                   </IconButton>
-                  <IconButton>
+                  <IconButton onClick={goToNextPage} disabled={page === totalPage}>
                     <ChevronRight className="size-4" />
                   </IconButton>
-                  <IconButton>
+                  <IconButton onClick={goToLastPage} disabled={page === totalPage}>
                     <ChevronsRight className="size-4" />
                   </IconButton>
                 </div>
